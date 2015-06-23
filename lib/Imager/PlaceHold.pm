@@ -5,10 +5,19 @@ package Imager::PlaceHold;
 
 use Imager;
 use Moo;
+use File::Find;
+use File::Spec;
+use Scalar::Util qw(looks_like_number);
 
 has font_file => (
     is      => 'ro',
-    default => "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf"
+    default => sub {
+        my $font;
+        my @paths = File::Spec->catfile('/','usr','share','fonts');
+        find( sub { $font = $File::Find::name if $_ eq 'DejaVuSans-Bold.ttf' }, @paths);
+        die "font not found." if not $font;
+        return $font;
+    }
 );
 
 has font_color => (
@@ -35,11 +44,19 @@ has text => ( is => 'lazy', );
 
 has text_x_perc_size => (
     is      => 'ro',
+    isa     => sub {
+        die "$_[0] is not a number!" unless looks_like_number $_[0];
+        die "$_[0] is not greater than 0 and less or equal to 1!" unless $_[0] > 0 && $_[0] <= 1;
+    },
     default => 0.5
 );
 
 has text_y_perc_size => (
     is      => 'ro',
+    isa     => sub {
+        die "$_[0] is not a number!" unless looks_like_number $_[0];
+        die "$_[0] is not 0 < text_y_perc_size <= 1!" unless $_[0] > 0 && $_[0] <= 1;
+    },
     default => 0.5
 );
 
@@ -47,6 +64,13 @@ has font => ( is => 'lazy' );
 
 has image => ( is => 'lazy' );
 
+#sub BUILDARGS {
+#    my ($class, %args) = @_;
+#
+#    use DDP;
+#    p %args;
+#    return { %args };
+#}
 
 sub _build_text {
     my ($self) = @_;
@@ -71,7 +95,7 @@ sub _build_image {
         xsize    => $self->x_size,
         ysize    => $self->y_size,
         channels => 4,
-        debug    => 1
+        debug    => 0
     );
     $img->box( filled => 1, color => $self->background_color );
     return $img;
@@ -101,16 +125,7 @@ sub image_with_string {
             canon  => 1,
             size   => $text_size++
           );
-my @a = (
-            $neg_width, $global_descent, $pos_width, $global_ascent, $descent,
-            $ascent, $advance_width, $right_bearing
-          );
-p @a;
-        if ( $text_x_size > $pos_width && $text_y_size > $global_ascent ) {
-#            $pos_width = $local_pos_width;
-#            $global_ascent = $local_global_ascent;
-        }
-        else {
+        if ( ! ($text_x_size > $pos_width && $text_y_size > $global_ascent) ) {
             $text_size = $text_size - 2;
         (
             $neg_width, $global_descent, $pos_width, $global_ascent, $descent,
@@ -121,7 +136,6 @@ p @a;
             canon  => 1,
             size   => $text_size
           );
-
             last;
         }
     }
@@ -136,7 +150,6 @@ p @a;
         y      => $font_y_size,
         size   => $text_size
     );
-
     $self->image->write( file => "test.png", type => 'png' );
 
 }
