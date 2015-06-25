@@ -13,9 +13,12 @@ has font_file => (
     is      => 'ro',
     default => sub {
         my $font;
-        my @paths = File::Spec->catfile('/','usr','share','fonts');
-        find( sub { $font = $File::Find::name if $_ eq 'DejaVuSans-Bold.ttf' }, @paths);
-        die "font not found." if not $font;
+        my @paths = ();
+        foreach my $font_path (File::Spec->catfile('/','usr','share','fonts'), File::Spec->catfile('/','windows','fonts')) {
+            push @paths, $font_path if -e $font_path;
+        }
+        find( sub { $font = $File::Find::name if ($_ eq 'verdanab.ttf' || $_ eq 'DejaVuSans-Bold.ttf')}, @paths);
+        die "Font not found." if not $font;
         return $font;
     }
 );
